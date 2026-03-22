@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --color-backg: #16161e;
+  --color-backga: #0f0f13;
+  --color-text: #00ffd5;
+  --color-texts: #e6e6e6;
+  --color-panels: #1d1d29;
+
+  /* Yeni Eklediğimiz Efekt Renkleri */
+  --color-accent-glow: rgba(0, 255, 213, 0.15);
+  --shadow-neon: 0 0 15px rgba(0, 255, 213, 0.2);
+}
+
+:root {
+  background-color: var(--color-backga);
+}
+
+/* Manga Editör Izgarası (Canvas Arkaplanı) */
+.manga-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* Cam Efekti */
+.glass-panel {
+  background: rgba(22, 22, 30, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  /* Kaydırma çubuğunun genişliği */
+  height: 6px;
+  /* Yatay scroll için yükseklik */
+}
+
+/* Scrollbar'ın geçtiği yol (Track) */
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  /* Çok hafif transparan bir iz */
+  border-radius: 10px;
+}
+
+/* Kaydırdığımız çubuk (Thumb) */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 213, 0.2);
+  /* Senin temanın ikon rengi (cyan) tonlarında */
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Üzerine gelindiğinde parlaması (Hover) */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 213, 0.5);
+  /* Mouse üzerine gelince daha belirgin cyan */
+}
+
+/* Firefox için destek */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 213, 0.2) rgba(255, 255, 255, 0.02);
+}
