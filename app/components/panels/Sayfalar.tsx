@@ -1,3 +1,4 @@
+// app/components/panels/Sayfalar.tsx
 "use client";
 import React from "react";
 import { CircleX, Copy, ImageIcon } from 'lucide-react';

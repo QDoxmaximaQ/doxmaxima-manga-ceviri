@@ -1,3 +1,4 @@
+// app/components/panels/katman.tsx
 "use client";
 import React, { useState } from "react";
 import { Layers, Eye, EyeOff, Trash2, Plus, CircleX, GripVertical, Square } from 'lucide-react';

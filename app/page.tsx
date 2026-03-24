@@ -1,3 +1,4 @@
+// app/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -22,6 +23,7 @@ export default function Home() {
    */
   const [activeTool, setActiveTool] = useState("handle");
   const [isProcessing, setIsProcessing] = useState(false); // AI işlem durumu (Loading Overlay için)
+  const [systemMessage, setSystemMessage] = useState({ text: "Sistem: Hazır", color: "text-text/90" });
 
   /**
    * --- MERKEZİ VERİ YÖNETİMİ (HOOK) ---
@@ -100,6 +102,19 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  /**
+   * --- BOŞ CANVAS KORUMASI ---
+   * Eğer yüklenmiş hiçbir resim/sayfa yoksa, diğer araçların kullanılmasını engeller 
+   * ve aracı zorunlu olarak 'handle' (kaydırma) yapar.
+   */
+  const isCanvasEmpty = pages.length === 0;
+
+  useEffect(() => {
+    if (isCanvasEmpty && activeTool !== "handle") {
+      setActiveTool("handle");
+    }
+  }, [isCanvasEmpty, activeTool]);
+
   return (
     <main className="flex h-screen w-full flex-col overflow-hidden bg-backg text-white select-none">
       {/* Editör Açılış Bilgilendirme Ekranı */}
@@ -115,7 +130,12 @@ export default function Home() {
 
       <div className="relative flex flex-1 overflow-hidden">
         {/* Sol Panel: Araç seçimi */}
-        <Leftpanel activeTool={activeTool} setActiveTool={setActiveTool} />
+        <Leftpanel 
+          activeTool={activeTool} 
+          setActiveTool={setActiveTool} 
+          isCanvasEmpty={isCanvasEmpty} 
+          setSystemMessage={setSystemMessage} 
+        />
 
         {/* Orta Alan: Ana Çizim ve İşlem Tuvali
             setIsProcessing: Hook sistemi ile çalışan AI aracının loading durumunu Canvas içinden yönetmek için aktarıldı.
@@ -162,7 +182,13 @@ export default function Home() {
       )}
 
       {/* Alt Panel: Çoklu resim yükleme ve hızlı sayfa navigasyonu */}
-      <Bottompanel onImagesUpload={addPages} />
+      <Bottompanel 
+        onImagesUpload={(urls) => {
+          addPages(urls);
+          setSystemMessage({ text: "Sistem: Hazır", color: "text-text/90" });
+        }} 
+        systemMessage={systemMessage}
+      />
     </main>
   );
 }

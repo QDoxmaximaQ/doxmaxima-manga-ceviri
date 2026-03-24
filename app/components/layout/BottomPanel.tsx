@@ -1,3 +1,4 @@
+// app/components/layout/BottomPanel.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,13 +7,11 @@ import { Play, Square, UploadCloud, Download } from 'lucide-react';
 // Prop tipini dizi (string[]) alacak şekilde güncelledik
 interface BottomPanelProps {
     onImagesUpload: (imageUrls: string[]) => void;
+    systemMessage: { text: string; color: string };
 }
 
-export default function Bottompanel({ onImagesUpload }: BottomPanelProps) {
+export default function Bottompanel({ onImagesUpload, systemMessage }: BottomPanelProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [hasMounted, setHasMounted] = useState(false);
-
-    useEffect(() => { setHasMounted(true); }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -65,8 +64,8 @@ export default function Bottompanel({ onImagesUpload }: BottomPanelProps) {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-text opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-text"></span>
                     </div>
-                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-text/90 font-bold">
-                        {hasMounted ? "Sistem: Hazır" : "Yükleniyor..."}
+                    <span className={`text-[9px] font-mono uppercase tracking-[0.2em] font-bold ${systemMessage.color}`}>
+                        {systemMessage.text}
                     </span>
                 </div>
             </div>

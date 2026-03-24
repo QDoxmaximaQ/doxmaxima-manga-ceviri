@@ -1,3 +1,4 @@
+// app/components/layout/RightPanel.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";

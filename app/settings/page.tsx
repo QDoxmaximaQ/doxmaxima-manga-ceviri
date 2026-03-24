@@ -1,3 +1,4 @@
+// app/settings/page.tsx
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -13,13 +14,23 @@ import {
   ChevronDown,
   Layers,
   ShieldCheck,
-  Image
+  Image,
+  ScanSearch
 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [isSaved, setIsSaved] = useState(false);
+  const [ocrEngine, setOcrEngine] = useState<string>("tesseract");
+
+  useEffect(() => {
+    const savedOcr = localStorage.getItem("ocrEngine");
+    if (savedOcr) {
+      setOcrEngine(savedOcr);
+    }
+  }, []);
 
   const saveAllSettings = () => {
+    localStorage.setItem("ocrEngine", ocrEngine);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -94,6 +105,26 @@ export default function SettingsPage() {
                 { code: "en", name: "English" },
               ]}
               onChange={() => {}}
+            />
+          </div>
+        </section>
+
+        {/* OCR (YAZI TANIMA) AYARLARI */}
+        <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+            <ScanSearch size={20} className="text-text" />
+            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#00ffd5]">OCR (Yazı Tanıma) Ayarları</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+            <CustomSelect
+              label="Varsayılan OCR Motoru"
+              value={ocrEngine}
+              options={[
+                { code: "gemini", name: "Gemini Vision API (Bulut - Hızlı)" },
+                { code: "tesseract", name: "Tesseract.js (Tarayıcı İçi - Sınırsız)" },
+                { code: "cloudvision", name: "Google Cloud Vision (Alternatif)" },
+              ]}
+              onChange={(val) => setOcrEngine(val)}
             />
           </div>
         </section>

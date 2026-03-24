@@ -1,3 +1,4 @@
+// app/components/hooks/useZoom.ts
 "use client";
 import { useState, useEffect, useCallback } from "react";
 

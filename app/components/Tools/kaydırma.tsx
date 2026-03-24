@@ -1,3 +1,4 @@
+// app/components/Tools/kaydırma.tsx
 "use client";
 import React, { useState, useCallback, useEffect } from "react";
 import { FaHandMiddleFinger } from "react-icons/fa";

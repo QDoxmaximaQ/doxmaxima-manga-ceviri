@@ -1,3 +1,4 @@
+// app/components/Tools/Fırca.tsx
 "use client";
 
 import { Brush } from "lucide-react";

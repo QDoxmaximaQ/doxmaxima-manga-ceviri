@@ -1,3 +1,4 @@
+// app/components/layout/LeftPanel.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
@@ -25,9 +26,11 @@ const INITIAL_TOOLS = [
 interface LeftPanelProps {
     activeTool: string;
     setActiveTool: (id: string) => void;
+    isCanvasEmpty?: boolean;
+    setSystemMessage: (msg: { text: string; color: string }) => void;
 }
 
-export default function Leftpanel({ activeTool, setActiveTool }: LeftPanelProps) {
+export default function Leftpanel({ activeTool, setActiveTool, isCanvasEmpty = false, setSystemMessage }: LeftPanelProps) {
     const [isPinned, setIsPinned] = useState(true);
     const [width, setWidth] = useState(64);
     const [isResizing, setIsResizing] = useState(false);
@@ -49,7 +52,10 @@ export default function Leftpanel({ activeTool, setActiveTool }: LeftPanelProps)
             const reorderedTools = orderIds.map((id: string) => 
                 INITIAL_TOOLS.find(t => t.id === id)
             ).filter(Boolean);
-            setTools(reorderedTools);
+            
+            // Eğer localStorage'da olmayan (yeni eklenmiş) araçlar varsa sonuna ekle
+            const missingTools = INITIAL_TOOLS.filter(t => !orderIds.includes(t.id));
+            setTools([...reorderedTools, ...missingTools]);
         }
     }, []);
 
@@ -159,29 +165,48 @@ export default function Leftpanel({ activeTool, setActiveTool }: LeftPanelProps)
                 {/* Araç Izgarası */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
                     <div className={`grid ${getGridCols()} gap-y-7 gap-x-2 px-2 justify-items-center transition-all duration-300`}>
-                        {tools.map((tool, index) => (
-                            <div 
-                                key={tool.id}
-                                draggable={isEditing}
-                                onDragStart={() => handleDragStart(index)}
-                                onDragOver={(e) => handleDragOver(e, index)}
-                                onDragEnd={handleDrop}
-                                className={`relative transition-all ${isEditing ? 'cursor-grab active:cursor-grabbing hover:scale-110' : ''} 
-                                    ${draggedItemIndex === index ? 'opacity-30 scale-90' : 'opacity-100'}`}
-                            >
-                                {/* Sürükleme Modunda Görsel Belirteç */}
-                                {isEditing && (
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-text rounded-full animate-ping pointer-events-none" />
-                                )}
-                                
-                                {/* Araç bileşenine seçim durumunu ve tıklama fonksiyonunu gönderiyoruz */}
-                                <tool.Component 
-                                    isActive={activeTool === tool.id}
-                                    onClick={() => !isEditing && setActiveTool(tool.id)}
-                                />
-                                
-                            </div>
-                        ))}
+                        {tools.map((tool, index) => {
+                            const isDisabled = isCanvasEmpty && tool.id !== "handle";
+                            return (
+                                <div 
+                                    key={tool.id}
+                                    draggable={isEditing}
+                                    onDragStart={() => handleDragStart(index)}
+                                    onDragOver={(e) => handleDragOver(e, index)}
+                                    onDragEnd={handleDrop}
+                                    className={`relative transition-all duration-300
+                                        ${isEditing ? 'cursor-grab active:cursor-grabbing hover:scale-110' : ''} 
+                                        ${draggedItemIndex === index ? 'opacity-30 scale-90' : 'opacity-100'}
+                                        ${isDisabled ? 'opacity-25 grayscale' : ''}
+                                    `}
+                                    onClick={() => {
+                                        if (isDisabled) {
+                                            setSystemMessage({ text: "Sistem: Lütfen Önce Bir Resim Yükleyin!", color: "text-red-500 font-black animate-pulse" });
+                                            // 3 saniye sonra geri eski haline çevir
+                                            setTimeout(() => {
+                                                setSystemMessage({ text: "Sistem: Hazır", color: "text-text/90" });
+                                            }, 3000);
+                                        }
+                                    }}
+                                >
+                                    {/* Sürükleme Modunda Görsel Belirteç */}
+                                    {isEditing && (
+                                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-text rounded-full animate-ping pointer-events-none" />
+                                    )}
+                                    
+                                    {/* Araç bileşenine seçim durumunu ve tıklama fonksiyonunu gönderiyoruz */}
+                                    <tool.Component 
+                                        isActive={activeTool === tool.id}
+                                        onClick={() => {
+                                            if (!isEditing && !isDisabled) {
+                                                setActiveTool(tool.id);
+                                            }
+                                        }}
+                                    />
+                                    
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 

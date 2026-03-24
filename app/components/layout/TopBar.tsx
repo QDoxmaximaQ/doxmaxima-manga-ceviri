@@ -1,3 +1,4 @@
+// app/components/layout/TopBar.tsx
 import Link from "next/link";
 import { Settings, HelpCircle, RotateCcw, RotateCw } from "lucide-react";
 

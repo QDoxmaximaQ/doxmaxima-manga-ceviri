@@ -1,3 +1,4 @@
+// app/components/Tools/metin.tsx
 "use client";
 
 import { FiType } from "react-icons/fi";

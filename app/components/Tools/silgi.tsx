@@ -1,3 +1,4 @@
+// app/components/Tools/silgi.tsx
 "use client";
 import { BsFillEraserFill } from "react-icons/bs";
 import React, { useState, useRef } from "react";

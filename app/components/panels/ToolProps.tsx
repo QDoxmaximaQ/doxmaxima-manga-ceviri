@@ -1,3 +1,4 @@
+// app/components/panels/ToolProps.tsx
 "use client";
 import React from "react";
 import { CircleX, Settings2, AlertCircle } from 'lucide-react';
