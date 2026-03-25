@@ -164,7 +164,7 @@ export default function Canvas({
         }
 
         if (activeTool === 'otosecme') {
-            autoSelection.triggerAI();
+            autoSelection.triggerAI(coords.x, coords.y);
             return;
         }
 
@@ -269,14 +269,30 @@ export default function Canvas({
                 {/* 3. KAYITLI SEÇİM ALANLARI */}
                 {activePage?.layers.map(layer => (
                     layer.selection && layer.isVisible && (
-                        <SelectionBox
-                            key={layer.id}
-                            layer={layer}
-                            isActive={activeLayerId === layer.id}
-                            canvasSize={canvasSize}
-                            scale={scale}
-                            onUpdate={handleUpdateSelection}
-                        />
+                        <React.Fragment key={layer.id}>
+                            <SelectionBox
+                                layer={layer}
+                                isActive={activeLayerId === layer.id}
+                                canvasSize={canvasSize}
+                                scale={scale}
+                                onUpdate={handleUpdateSelection}
+                            />
+                            {/* YAPAY ZEKA İŞARETLEYİCİ - Merkeze Kırmızı Yuvarlak */}
+                            {layer.id.startsWith('layer-ai-') && (
+                                <div style={{
+                                    position: 'absolute',
+                                    left: `${layer.selection.x + layer.selection.w / 2}px`,
+                                    top: `${layer.selection.y + layer.selection.h / 2}px`,
+                                    width: '25px',
+                                    height: '25px',
+                                    backgroundColor: 'red',
+                                    borderRadius: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    pointerEvents: 'none',
+                                    zIndex: 155
+                                }} />
+                            )}
+                        </React.Fragment>
                     )
                 ))}
 

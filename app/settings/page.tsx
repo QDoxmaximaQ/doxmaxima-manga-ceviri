@@ -20,17 +20,31 @@ import {
 
 export default function SettingsPage() {
   const [isSaved, setIsSaved] = useState(false);
-  const [ocrEngine, setOcrEngine] = useState<string>("tesseract");
+  const [ocrEngine, setOcrEngine] = useState<string>("ocrspace");
+  const [ocrspaceKey, setOcrspaceKey] = useState<string>("");
+  const [paddleOcrUrl, setPaddleOcrUrl] = useState<string>("");
+  const [paddleOcrLang, setPaddleOcrLang] = useState<string>("en");
 
   useEffect(() => {
     const savedOcr = localStorage.getItem("ocrEngine");
     if (savedOcr) {
       setOcrEngine(savedOcr);
     }
+    const savedOcrSpace = localStorage.getItem("ocrspaceApiKey");
+    if (savedOcrSpace) setOcrspaceKey(savedOcrSpace);
+
+    const savedPaddleOcr = localStorage.getItem("paddleOcrUrl");
+    if (savedPaddleOcr) setPaddleOcrUrl(savedPaddleOcr);
+
+    const savedPaddleLang = localStorage.getItem("paddleOcrLang");
+    if (savedPaddleLang) setPaddleOcrLang(savedPaddleLang);
   }, []);
 
   const saveAllSettings = () => {
     localStorage.setItem("ocrEngine", ocrEngine);
+    localStorage.setItem("ocrspaceApiKey", ocrspaceKey);
+    localStorage.setItem("paddleOcrUrl", paddleOcrUrl);
+    localStorage.setItem("paddleOcrLang", paddleOcrLang);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -60,12 +74,12 @@ export default function SettingsPage() {
         <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
             <Key size={20} className="text-text" />
-            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#FF7B00]">Metin API Anahtarları (OCR + Çeviri)</h2>
+            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#FF7B00]">Metin API Anahtarları (Text & Çeviri)</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-            <KeyInput label="GEMINI API KEY" value="" onChange={() => {}} />
-            <KeyInput label="GROQ API KEY" value="" onChange={() => {}} />
-            <KeyInput label="DEEPL API KEY" value="" onChange={() => {}} />
+            <KeyInput label="GEMINI API KEY" value="" onChange={() => { }} />
+            <KeyInput label="GROQ API KEY" value="" onChange={() => { }} />
+            <KeyInput label="DEEPL API KEY" value="" onChange={() => { }} />
           </div>
         </section>
 
@@ -73,10 +87,19 @@ export default function SettingsPage() {
         <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
             <Image size={20} className="text-text" />
-            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#FF7B00]">Resim API Anahtarları (Inpainting)</h2>
+            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#FF7B00]">OCR & Inpainting Api Keys</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-            <KeyInput label="CLOUDFLARE API KEY" value="" onChange={() => {}} />
+            <KeyInput
+              label="OCR.SPACE API KEY"
+              value={ocrspaceKey}
+              onChange={(val) => setOcrspaceKey(val)}
+            />
+            <KeyInput
+              label="PADDLE-OCR API Key"
+              value={paddleOcrUrl}
+              onChange={(val) => setPaddleOcrUrl(val)}
+            />
           </div>
         </section>
 
@@ -95,7 +118,7 @@ export default function SettingsPage() {
                 { code: "groq", name: "Groq" },
                 { code: "deepl", name: "DeepL" },
               ]}
-              onChange={() => {}}
+              onChange={() => { }}
             />
             <CustomSelect
               label="Hedef Dil"
@@ -104,7 +127,7 @@ export default function SettingsPage() {
                 { code: "tr", name: "Türkçe" },
                 { code: "en", name: "English" },
               ]}
-              onChange={() => {}}
+              onChange={() => { }}
             />
           </div>
         </section>
@@ -113,18 +136,33 @@ export default function SettingsPage() {
         <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
             <ScanSearch size={20} className="text-text" />
-            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#00ffd5]">OCR (Yazı Tanıma) Ayarları</h2>
+            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#00ffd5]">OCR Ayarları</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
             <CustomSelect
               label="Varsayılan OCR Motoru"
               value={ocrEngine}
               options={[
-                { code: "gemini", name: "Gemini Vision API (Bulut - Hızlı)" },
-                { code: "tesseract", name: "Tesseract.js (Tarayıcı İçi - Sınırsız)" },
-                { code: "cloudvision", name: "Google Cloud Vision (Alternatif)" },
+                { code: "ocrspace", name: "OCR.Space" },
+                { code: "paddleocr", name: "PaddleOCR" }
               ]}
               onChange={(val) => setOcrEngine(val)}
+            />
+            <CustomSelect
+              label="PaddleOCR Kaynak Dil"
+              value={paddleOcrLang}
+              options={[
+                { code: "en", name: "İngilizce" },
+                { code: "latin", name: "Latin Alfabesi" },
+                { code: "fr", name: "Fransızca" },
+                { code: "german", name: "Almanca" },
+                { code: "japan", name: "Japonca" },
+                { code: "ch", name: "Çince" },
+                { code: "korean", name: "Korece" },
+                { code: "arabic", name: "Arapça" },
+                { code: "ru", name: "Kiril Alfabesi" },
+              ]}
+              onChange={(val) => setPaddleOcrLang(val)}
             />
           </div>
         </section>
@@ -146,7 +184,7 @@ export default function SettingsPage() {
                 { code: "ko", name: "Korece" },
                 { code: "en", name: "İngilizce" },
               ]}
-              onChange={() => {}}
+              onChange={() => { }}
             />
             <CustomSelect
               label="Hedef Dil (Target)"
@@ -155,7 +193,7 @@ export default function SettingsPage() {
                 { code: "tr", name: "Türkçe" },
                 { code: "en", name: "İngilizce" },
               ]}
-              onChange={() => {}}
+              onChange={() => { }}
             />
           </div>
         </section>
