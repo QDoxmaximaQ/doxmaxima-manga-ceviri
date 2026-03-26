@@ -17,13 +17,17 @@ import {
   Image,
   ScanSearch
 } from 'lucide-react';
+import { OcrEngines, getLanguagesForEngine } from '../ocr/Ocr_model';
 
 export default function SettingsPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [ocrEngine, setOcrEngine] = useState<string>("ocrspace");
   const [ocrspaceKey, setOcrspaceKey] = useState<string>("");
+  const [ocrspaceLang, setOcrspaceLang] = useState<string>("eng");
   const [paddleOcrUrl, setPaddleOcrUrl] = useState<string>("");
   const [paddleOcrLang, setPaddleOcrLang] = useState<string>("en");
+  const [easyOcrUrl, setEasyOcrUrl] = useState<string>("Doxmaxima/EasyOCR-v1");
+  const [easyOcrLang, setEasyOcrLang] = useState<string>("latin");
 
   useEffect(() => {
     const savedOcr = localStorage.getItem("ocrEngine");
@@ -38,6 +42,15 @@ export default function SettingsPage() {
 
     const savedPaddleLang = localStorage.getItem("paddleOcrLang");
     if (savedPaddleLang) setPaddleOcrLang(savedPaddleLang);
+
+    const savedEasyOcrUrl = localStorage.getItem("easyOcrUrl");
+    if (savedEasyOcrUrl) setEasyOcrUrl(savedEasyOcrUrl);
+
+    const savedEasyOcrLang = localStorage.getItem("easyOcrLang");
+    if (savedEasyOcrLang) setEasyOcrLang(savedEasyOcrLang);
+
+    const savedOcrspaceLang = localStorage.getItem("ocrspaceLang");
+    if (savedOcrspaceLang) setOcrspaceLang(savedOcrspaceLang);
   }, []);
 
   const saveAllSettings = () => {
@@ -45,6 +58,9 @@ export default function SettingsPage() {
     localStorage.setItem("ocrspaceApiKey", ocrspaceKey);
     localStorage.setItem("paddleOcrUrl", paddleOcrUrl);
     localStorage.setItem("paddleOcrLang", paddleOcrLang);
+    localStorage.setItem("easyOcrUrl", easyOcrUrl);
+    localStorage.setItem("easyOcrLang", easyOcrLang);
+    localStorage.setItem("ocrspaceLang", ocrspaceLang);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -100,6 +116,11 @@ export default function SettingsPage() {
               value={paddleOcrUrl}
               onChange={(val) => setPaddleOcrUrl(val)}
             />
+            <KeyInput
+              label="EASY-OCR URL"
+              value={easyOcrUrl}
+              onChange={(val) => setEasyOcrUrl(val)}
+            />
           </div>
         </section>
 
@@ -132,41 +153,6 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* OCR (YAZI TANIMA) AYARLARI */}
-        <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6">
-          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-            <ScanSearch size={20} className="text-text" />
-            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#00ffd5]">OCR Ayarları</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-            <CustomSelect
-              label="Varsayılan OCR Motoru"
-              value={ocrEngine}
-              options={[
-                { code: "ocrspace", name: "OCR.Space" },
-                { code: "paddleocr", name: "PaddleOCR" }
-              ]}
-              onChange={(val) => setOcrEngine(val)}
-            />
-            <CustomSelect
-              label="PaddleOCR Kaynak Dil"
-              value={paddleOcrLang}
-              options={[
-                { code: "en", name: "İngilizce" },
-                { code: "latin", name: "Latin Alfabesi" },
-                { code: "fr", name: "Fransızca" },
-                { code: "german", name: "Almanca" },
-                { code: "japan", name: "Japonca" },
-                { code: "ch", name: "Çince" },
-                { code: "korean", name: "Korece" },
-                { code: "arabic", name: "Arapça" },
-                { code: "ru", name: "Kiril Alfabesi" },
-              ]}
-              onChange={(val) => setPaddleOcrLang(val)}
-            />
-          </div>
-        </section>
-
         {/* 4. DEEPL DİL MOTORU */}
         <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6 relative z-40">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
@@ -195,6 +181,37 @@ export default function SettingsPage() {
               ]}
               onChange={() => { }}
             />
+          </div>
+        </section>
+
+        {/* OCR (YAZI TANIMA) AYARLARI */}
+        <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+            <ScanSearch size={20} className="text-text" />
+            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#00ffd5]">OCR Ayarları</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+            <CustomSelect
+              label="Varsayılan OCR Motoru"
+              value={ocrEngine}
+              options={OcrEngines}
+              onChange={(val) => setOcrEngine(val)}
+            />
+            {getLanguagesForEngine(ocrEngine).length > 0 && (
+                <CustomSelect
+                  label="OCR Kaynak Dil"
+                  value={
+                    ocrEngine === "paddleocr" ? paddleOcrLang : 
+                    ocrEngine === "easyocr" ? easyOcrLang : ocrspaceLang
+                  }
+                  options={getLanguagesForEngine(ocrEngine)}
+                  onChange={(val) => {
+                    if (ocrEngine === "paddleocr") setPaddleOcrLang(val);
+                    else if (ocrEngine === "easyocr") setEasyOcrLang(val);
+                    else setOcrspaceLang(val);
+                  }}
+                />
+            )}
           </div>
         </section>
 

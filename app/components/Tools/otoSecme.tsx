@@ -99,6 +99,10 @@ export function useAutoSelection(
                 const { recognizeWithPaddleOCR } = await import("../../ocr/paddleocr");
                 const endpointUrl = localStorage.getItem("paddleOcrUrl") || "";
                 results = await recognizeWithPaddleOCR(activePage.url, endpointUrl);
+            } else if (engine === "easyocr") {
+                const { recognizeWithEasyOCR } = await import("../../ocr/easyocr");
+                const endpointUrl = localStorage.getItem("easyOcrUrl") || "Doxmaxima/EasyOCR-v1";
+                results = await recognizeWithEasyOCR(activePage.url, endpointUrl);
             }
 
             console.log(`[OtoSecme] OCR ham sonuç sayısı: ${results.length}`);
