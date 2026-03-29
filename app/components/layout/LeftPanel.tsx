@@ -28,9 +28,10 @@ interface LeftPanelProps {
     setActiveTool: (id: string) => void;
     isCanvasEmpty?: boolean;
     setSystemMessage: (msg: { text: string; color: string }) => void;
+    isProcessing?: boolean;
 }
 
-export default function Leftpanel({ activeTool, setActiveTool, isCanvasEmpty = false, setSystemMessage }: LeftPanelProps) {
+export default function Leftpanel({ activeTool, setActiveTool, isCanvasEmpty = false, setSystemMessage, isProcessing = false }: LeftPanelProps) {
     const [isPinned, setIsPinned] = useState(true);
     const [width, setWidth] = useState(64);
     const [isResizing, setIsResizing] = useState(false);
@@ -197,6 +198,7 @@ export default function Leftpanel({ activeTool, setActiveTool, isCanvasEmpty = f
                                     {/* Araç bileşenine seçim durumunu ve tıklama fonksiyonunu gönderiyoruz */}
                                     <tool.Component 
                                         isActive={activeTool === tool.id}
+                                        isProcessing={isProcessing}
                                         onClick={() => {
                                             if (!isEditing && !isDisabled) {
                                                 setActiveTool(tool.id);

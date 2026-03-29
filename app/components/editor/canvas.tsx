@@ -6,6 +6,7 @@ import { useHandleLogic } from "../Tools/kaydırma"; // Tuval kaydırma lojiği
 
 // TİPLERİ MERKEZİ useLayers'DAN ALIYORUZ
 import { MangaPage, ToolSettings } from "../hooks/useLayers";
+import { calcDisplaySize } from "../../utils/displaySize";
 
 // Araç Hook'ları ve Bileşenleri
 import { useBrush } from "../Tools/Fırca";
@@ -27,7 +28,9 @@ interface CanvasProps {
     setActiveLayerId: (id: string | null) => void;
     toolSettings: ToolSettings;
     setIsProcessing: (val: boolean) => void;
+    isProcessing: boolean;
     pushHistory: () => void; // ← ekle
+    setSystemMessage: (msg: { text: string; color: string }) => void;
 }
 
 export default function Canvas({
@@ -40,7 +43,9 @@ export default function Canvas({
     setActiveLayerId,
     toolSettings,
     setIsProcessing,
-    pushHistory // ← ekle
+    isProcessing,
+    pushHistory, // ← ekle
+    setSystemMessage
 }: CanvasProps) {
     // 1. SÜRÜKLEME (PAN) VE ZOOM MANTIĞI
     const { position, isDragging: isHandling, handleMouseDown: startHandling } = useHandleLogic(activeTool);
@@ -51,6 +56,7 @@ export default function Canvas({
     const tempCanvasRef = useRef<HTMLCanvasElement>(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [isInside, setIsInside] = useState(false);
+    const [showAutoSelectModal, setShowAutoSelectModal] = useState(false);
 
     // 3. ARAÇ HOOK ENTEGRASYONLARI
     const brush = useBrush(tempCanvasRef, activePageId, activeLayerId, pages, toolSettings, setPages, setActiveLayerId);
@@ -58,7 +64,7 @@ export default function Canvas({
     const selection = useSelection(activePageId, pages, setPages, setActiveLayerId);
     const textTool = useText(activePageId, pages, setPages, setActiveLayerId, toolSettings);
     // AI Aracı Hook'u
-    const autoSelection = useAutoSelection(activePageId, pages, setPages, setIsProcessing);
+    const autoSelection = useAutoSelection(activePageId, pages, setPages, setIsProcessing, setSystemMessage);
 
     const activePage = pages.find(p => p.id === activePageId);
 
@@ -108,15 +114,8 @@ export default function Canvas({
         const img = new Image();
         img.onload = () => {
             if (cancelled) return;
-            const w = img.naturalWidth;
-            const h = img.naturalHeight;
-            const baseW = 840;
-            const baseH = 1200;
-            if (h >= w) {
-                setCanvasSize({ width: Math.round(baseH * (w / h)), height: baseH });
-            } else {
-                setCanvasSize({ width: baseW, height: Math.round(baseW * (h / w)) });
-            }
+            const { displayW, displayH } = calcDisplaySize(img.naturalWidth, img.naturalHeight);
+            setCanvasSize({ width: displayW, height: displayH });
         };
         img.src = uploadedImage;
         return () => { cancelled = true; };
@@ -136,10 +135,21 @@ export default function Canvas({
      * KÖPRÜ FONKSİYONLARI
      */
     const handleUpdateSelection = (layerId: string, newSelection: { x: number, y: number, w: number, h: number }) => {
+        // AI katmanları sabit kalır — koordinatlar değiştirilemez
+        if (layerId.startsWith('layer-ai-')) return;
+
         setPages(prev => prev.map(p =>
             p.id === activePageId ? {
                 ...p,
-                layers: p.layers.map(l => l.id === layerId ? { ...l, selection: newSelection } : l)
+                layers: p.layers.map(l => {
+                    if (l.id === layerId) {
+                        // Eğer bu katman daha önce hatalı (okunamadı -> lines: []) olarak işaretlendiyse
+                        // Kullanıcı bunu taşıdığında tekrar taranabilmesi için hatayı sıfırla (mor hale döndür)
+                        const resetLines = l.lines && l.lines.length === 0 ? undefined : l.lines;
+                        return { ...l, selection: newSelection, lines: resetLines };
+                    }
+                    return l;
+                })
             } : p
         ));
     };
@@ -164,7 +174,7 @@ export default function Canvas({
         }
 
         if (activeTool === 'otosecme') {
-            autoSelection.triggerAI(coords.x, coords.y);
+            setShowAutoSelectModal(true);
             return;
         }
 
@@ -246,7 +256,7 @@ export default function Canvas({
                 className={`absolute top-1/2 left-1/2 bg-[#f5eddc] shadow-[0_0_100px_rgba(0,0,0,0.8)] border border-white/5 origin-center overflow-hidden
                            ${activeTool === 'handle' ? (isHandling ? 'cursor-grabbing' : 'cursor-grab') :
                         activeTool === 'secme' || activeTool === 'metin' ? 'cursor-crosshair' :
-                            activeTool === 'otosecme' ? 'cursor-wait' : // AI aracı için bekleme imleci
+                            activeTool === 'otosecme' ? (isProcessing ? 'cursor-wait' : 'cursor-pointer') : // AI aracı tıklandığında imleç değişir
                                 (activeTool === 'fırca' || activeTool === 'remove') ? 'cursor-none' : 'cursor-default'}`}
             >
                 {/* 1. VARSAYILAN RESİM */}
@@ -259,42 +269,56 @@ export default function Canvas({
                     <img
                         key={layer.id}
                         src={layer.dataURL}
+                        style={{ 
+                            zIndex: i + 1,
+                            clipPath: layer.clipBox 
+                                ? `inset(${layer.clipBox.y}px ${Math.max(0, canvasSize.width - (layer.clipBox.x + layer.clipBox.w))}px ${Math.max(0, canvasSize.height - (layer.clipBox.y + layer.clipBox.h))}px ${layer.clipBox.x}px)`
+                                : undefined,
+                            opacity: (layer.id === activeLayerId && eraser.isDrawingEraser) ? 0 : 1
+                        }}
                         className="absolute inset-0 w-full h-full pointer-events-none"
-                        style={{ zIndex: i + 1 }}
                     />
                 ))}
 
 
 
                 {/* 3. KAYITLI SEÇİM ALANLARI */}
-                {activePage?.layers.map(layer => (
-                    layer.selection && layer.isVisible && (
-                        <React.Fragment key={layer.id}>
-                            <SelectionBox
-                                layer={layer}
-                                isActive={activeLayerId === layer.id}
-                                canvasSize={canvasSize}
-                                scale={scale}
-                                onUpdate={handleUpdateSelection}
-                            />
-                            {/* YAPAY ZEKA İŞARETLEYİCİ - Merkeze Kırmızı Yuvarlak */}
-                            {layer.id.startsWith('layer-ai-') && (
-                                <div style={{
-                                    position: 'absolute',
-                                    left: `${layer.selection.x + layer.selection.w / 2}px`,
-                                    top: `${layer.selection.y + layer.selection.h / 2}px`,
-                                    width: '25px',
-                                    height: '25px',
-                                    backgroundColor: 'red',
-                                    borderRadius: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    pointerEvents: 'none',
-                                    zIndex: 155
-                                }} />
-                            )}
-                        </React.Fragment>
-                    )
-                ))}
+                {(() => {
+                    // Tüm seçim katmanlarının koordinatlarını topla (mavi alan üst üste binme kontrolü için)
+                    const allSelections = activePage?.layers
+                        .filter(l => l.selection && l.isVisible)
+                        .map(l => ({ ...l.selection!, id: l.id })) || [];
+
+                    return activePage?.layers.map(layer => (
+                        layer.selection && layer.isVisible && (
+                            <React.Fragment key={layer.id}>
+                                <SelectionBox
+                                    layer={layer}
+                                    isActive={activeLayerId === layer.id}
+                                    canvasSize={canvasSize}
+                                    scale={scale}
+                                    onUpdate={handleUpdateSelection}
+                                    allSelections={allSelections}
+                                />
+                                {/* YAPAY ZEKA İŞARETLEYİCİ - Merkeze Kırmızı Yuvarlak */}
+                                {layer.id.startsWith('layer-ai-') && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        left: `${layer.selection.x + layer.selection.w / 2}px`,
+                                        top: `${layer.selection.y + layer.selection.h / 2}px`,
+                                        width: '25px',
+                                        height: '25px',
+                                        backgroundColor: 'red',
+                                        borderRadius: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        pointerEvents: 'none',
+                                        zIndex: 155
+                                    }} />
+                                )}
+                            </React.Fragment>
+                        )
+                    ));
+                })()}
 
                 {/* 4. METİN KUTULARI */}
                 {activePage?.layers.map(layer => (
@@ -353,7 +377,40 @@ export default function Canvas({
                     />
                 )}
 
-                <canvas ref={tempCanvasRef} width={canvasSize.width} height={canvasSize.height} className="absolute inset-0 w-full h-full z-100 pointer-events-none" />
+                <canvas 
+                    ref={tempCanvasRef} 
+                    width={canvasSize.width} 
+                    height={canvasSize.height} 
+                    style={{
+                        clipPath: (() => {
+                            if (!activeLayerId || !activePage) return undefined;
+                            const activeLayer = activePage.layers.find(l => l.id === activeLayerId);
+                            if (activeLayer?.clipBox && (eraser.isDrawingEraser || brush.isDrawingBrush)) {
+                                return `inset(${activeLayer.clipBox.y}px ${Math.max(0, canvasSize.width - (activeLayer.clipBox.x + activeLayer.clipBox.w))}px ${Math.max(0, canvasSize.height - (activeLayer.clipBox.y + activeLayer.clipBox.h))}px ${activeLayer.clipBox.x}px)`;
+                            }
+                            return undefined;
+                        })()
+                    }}
+                    className="absolute inset-0 w-full h-full z-[100] pointer-events-none mix-blend-normal" 
+                />
+
+                {/* YERELLEŞTİRİLMİŞ AI İŞLEM OVERLAY */}
+                {isProcessing && (
+                    <div className="absolute inset-0 z-[200] bg-black/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-auto select-none">
+                        <div className="flex flex-col items-center gap-3 p-6 bg-[#1c1c27]/80 rounded-3xl border border-text/20 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                            <div className="relative">
+                                <div className="w-16 h-16 border-4 border-text/10 border-t-text rounded-full animate-spin"></div>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-text rounded-full animate-ping"></div>
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-text font-black text-xs uppercase tracking-[0.2em] mb-1">OCR SİSTEMİ ÇALIŞIYOR</p>
+                                <p className="text-[9px] text-texts/40 uppercase font-bold">Resim Analiz Ediliyor...</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* BİLGİ PANELLERİ (Zoom ve Koordinat Bilgisi) */}
@@ -377,6 +434,46 @@ export default function Canvas({
                     </div>
                 )}
             </div>
+
+            {/* OTO SECME MODALI */}
+            {showAutoSelectModal && (
+                <div className="absolute inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
+                    <div className="bg-[#1c1c27] border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 max-w-sm w-full mx-4">
+                        <h3 className="text-text font-bold text-lg border-b border-white/10 pb-2">Oto Seçim İşlemi</h3>
+                        <p className="text-sm text-texts/80">
+                            OCR işleminin hangi sayfalara uygulanmasını istiyorsunuz?
+                        </p>
+                        <div className="flex gap-3 justify-end mt-4">
+                            <button
+                                onClick={() => {
+                                    setShowAutoSelectModal(false);
+                                }}
+                                className="px-4 py-2 rounded-xl text-texts/70 hover:bg-white/5 transition-colors"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowAutoSelectModal(false);
+                                    autoSelection.triggerAI('single');
+                                }}
+                                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-text/50 text-white transition-all hover:bg-white/10"
+                            >
+                                Sadece Bu Sayfa
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowAutoSelectModal(false);
+                                    autoSelection.triggerAI('all');
+                                }}
+                                className="px-5 py-2 rounded-xl bg-text text-black font-bold border border-transparent shadow-[0_0_15px_rgba(0,255,213,0.3)] hover:scale-105 transition-all cursor-pointer"
+                            >
+                                Tüm Sayfalar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 }

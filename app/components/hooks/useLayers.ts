@@ -33,7 +33,14 @@ export interface Layer {
         w: number;
         h: number;
     }; // Seçme aracı için
+    clipBox?: {
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+    }; // Maske arkaplanı için (görselin sadece belli bir bölümünü göstermek için)
 
+    // --- Metin Desteği (Metin Aracı için) ---
     // --- Metin Desteği (Metin Aracı için) ---
     text?: string; // Yazılan metin içeriği
     textConfig?: {
@@ -45,6 +52,9 @@ export interface Layer {
         color: string;
         fontFamily: string; // Yazı tipi desteği eklendi
     };
+
+    // --- OCR Satır Desteği ---
+    lines?: any[]; // Yapay zekadan gelen satır koordinatları
 }
 
 export interface MangaPage {

@@ -46,6 +46,7 @@ export function useHandleLogic(activeTool: string) {
 // --- 2. BUTON GÖRÜNÜMÜ ---
 interface HandleProps {
     isActive?: boolean;
+    isProcessing?: boolean;
     onClick?: () => void;
 }
 

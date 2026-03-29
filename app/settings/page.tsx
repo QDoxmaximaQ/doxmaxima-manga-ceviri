@@ -26,8 +26,12 @@ export default function SettingsPage() {
   const [ocrspaceLang, setOcrspaceLang] = useState<string>("eng");
   const [paddleOcrUrl, setPaddleOcrUrl] = useState<string>("");
   const [paddleOcrLang, setPaddleOcrLang] = useState<string>("en");
-  const [easyOcrUrl, setEasyOcrUrl] = useState<string>("Doxmaxima/EasyOCR-v1");
+  const [easyOcrUrl, setEasyOcrUrl] = useState<string>("");
   const [easyOcrLang, setEasyOcrLang] = useState<string>("latin");
+
+  const [lamaKey, setLamaKey] = useState<string>("");
+  const [sdKey, setSdKey] = useState<string>("");
+  const [nanoBananaKey, setNanoBananaKey] = useState<string>("");
 
   useEffect(() => {
     const savedOcr = localStorage.getItem("ocrEngine");
@@ -51,6 +55,15 @@ export default function SettingsPage() {
 
     const savedOcrspaceLang = localStorage.getItem("ocrspaceLang");
     if (savedOcrspaceLang) setOcrspaceLang(savedOcrspaceLang);
+
+    const savedLamaKey = localStorage.getItem("lamaApiKey");
+    if (savedLamaKey) setLamaKey(savedLamaKey);
+
+    const savedSdKey = localStorage.getItem("sdApiKey");
+    if (savedSdKey) setSdKey(savedSdKey);
+
+    const savedNanoBananaKey = localStorage.getItem("nanoBananaApiKey");
+    if (savedNanoBananaKey) setNanoBananaKey(savedNanoBananaKey);
   }, []);
 
   const saveAllSettings = () => {
@@ -61,6 +74,11 @@ export default function SettingsPage() {
     localStorage.setItem("easyOcrUrl", easyOcrUrl);
     localStorage.setItem("easyOcrLang", easyOcrLang);
     localStorage.setItem("ocrspaceLang", ocrspaceLang);
+    
+    localStorage.setItem("lamaApiKey", lamaKey);
+    localStorage.setItem("sdApiKey", sdKey);
+    localStorage.setItem("nanoBananaApiKey", nanoBananaKey);
+
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -120,6 +138,21 @@ export default function SettingsPage() {
               label="EASY-OCR URL"
               value={easyOcrUrl}
               onChange={(val) => setEasyOcrUrl(val)}
+            />
+            <KeyInput
+              label="LAMA API KEY / URL"
+              value={lamaKey}
+              onChange={(val) => setLamaKey(val)}
+            />
+            <KeyInput
+              label="STABLE DIFFUSION KEY"
+              value={sdKey}
+              onChange={(val) => setSdKey(val)}
+            />
+            <KeyInput
+              label="NANO BANANA KEY"
+              value={nanoBananaKey}
+              onChange={(val) => setNanoBananaKey(val)}
             />
           </div>
         </section>
@@ -198,19 +231,19 @@ export default function SettingsPage() {
               onChange={(val) => setOcrEngine(val)}
             />
             {getLanguagesForEngine(ocrEngine).length > 0 && (
-                <CustomSelect
-                  label="OCR Kaynak Dil"
-                  value={
-                    ocrEngine === "paddleocr" ? paddleOcrLang : 
+              <CustomSelect
+                label="OCR Kaynak Dil"
+                value={
+                  ocrEngine === "paddleocr" ? paddleOcrLang :
                     ocrEngine === "easyocr" ? easyOcrLang : ocrspaceLang
-                  }
-                  options={getLanguagesForEngine(ocrEngine)}
-                  onChange={(val) => {
-                    if (ocrEngine === "paddleocr") setPaddleOcrLang(val);
-                    else if (ocrEngine === "easyocr") setEasyOcrLang(val);
-                    else setOcrspaceLang(val);
-                  }}
-                />
+                }
+                options={getLanguagesForEngine(ocrEngine)}
+                onChange={(val) => {
+                  if (ocrEngine === "paddleocr") setPaddleOcrLang(val);
+                  else if (ocrEngine === "easyocr") setEasyOcrLang(val);
+                  else setOcrspaceLang(val);
+                }}
+              />
             )}
           </div>
         </section>

@@ -29,10 +29,11 @@ interface RightPanelProps {
     onDeletePage: (id: string) => void;
     activeLayerId: string | null;
     setActiveLayerId: (id: string | null) => void;
-    
     activeTool: string;
     toolSettings: any;
     setToolSettings: React.Dispatch<React.SetStateAction<any>>;
+    setIsProcessing: (val: boolean) => void;
+    setSystemMessage: (msg: { text: string; color: string }) => void;
 }
 
 export default function Rightpanel({ 
@@ -45,7 +46,9 @@ export default function Rightpanel({
     setActiveLayerId,
     activeTool,
     toolSettings,
-    setToolSettings
+    setToolSettings,
+    setIsProcessing,
+    setSystemMessage
 }: RightPanelProps) {
     // 1. DURUMLAR VE REFERANSLAR
     const [activePanels, setActivePanels] = useState(["tool", "katman", "sayfa"]);
@@ -220,6 +223,9 @@ export default function Rightpanel({
                                             pages={pages}
                                             setPages={setPages}
                                             activeLayerId={activeLayerId}
+                                            activePageId={activePageId}
+                                            setIsProcessing={setIsProcessing}
+                                            setSystemMessage={setSystemMessage}
                                             onClose={() => handleClose(id)}
                                         />
                                     ) : (

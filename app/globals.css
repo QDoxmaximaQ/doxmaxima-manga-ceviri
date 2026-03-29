@@ -62,3 +62,14 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 255, 213, 0.2) rgba(255, 255, 255, 0.02);
 }
+
+/* Sayı inputlarındaki çirkin tarayıcı oklarını gizle */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

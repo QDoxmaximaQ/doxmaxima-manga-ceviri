@@ -6,6 +6,7 @@ import { MangaPage, ToolSettings, Layer } from "../hooks/useLayers"; // Tipler a
 
 interface RevomeProps {
     isActive?: boolean;
+    isProcessing?: boolean;
     onClick?: () => void;
 }
 
@@ -50,9 +51,34 @@ export function useEraser(
         const ctx = tempCanvasRef.current?.getContext("2d");
         if (!ctx) return;
 
-        setIsDrawing(true);
-        lastPosRef.current = coords;
-        applyEraserStyle(ctx, toolSettings); // Silgi stilini uygula
+        const activePage = pages.find(p => p.id === activePageId);
+        const activeLayer = activePage?.layers.find(l => l.id === activeLayerId);
+
+        // KRİTİK: Ana Katman silinemez koruması
+        if (!activeLayer || activeLayer.isBase || !activeLayer.dataURL) return;
+
+        const img = new Image();
+        img.onload = () => {
+            // tempCanvas'ı temizle
+            ctx.clearRect(0, 0, tempCanvasRef.current!.width, tempCanvasRef.current!.height);
+            
+            // Mevcut katmanı tempCanvas'a çiz
+            ctx.globalCompositeOperation = "source-over"; // Normal mod
+            ctx.drawImage(img, 0, 0);
+
+            // Silgi ayarlarını yükle (destination-out ile anında silme modu)
+            applyEraserStyle(ctx, toolSettings, true); 
+
+            // Çizim durumunu aktif et (React state güncellenir, canvas.tsx'te orijinal resim gizlenir)
+            setIsDrawing(true);
+            lastPosRef.current = coords;
+            
+            // Sadece tıklama yapıldıysa tek nokta sil
+            ctx.beginPath();
+            ctx.arc(coords.x, coords.y, toolSettings.eraserSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        };
+        img.src = activeLayer.dataURL;
     };
 
     const moveEraser = (coords: { x: number; y: number }) => {
@@ -85,20 +111,28 @@ export function useEraser(
 /**
  * Silgi stil ayarları (Boyut, Opaklık ve Keskinlik)
  */
-export const applyEraserStyle = (ctx: CanvasRenderingContext2D, settings: ToolSettings) => {
+export const applyEraserStyle = (ctx: CanvasRenderingContext2D, settings: ToolSettings, isRealEraser: boolean = false) => {
     ctx.lineWidth = settings.eraserSize; // ToolProps'tan gelen silgi boyutu
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     
-    // Silgi izini tempCanvas üzerinde beyaz/opak bir maske olarak gösteririz
-    ctx.strokeStyle = `rgba(255, 255, 255, ${settings.eraserOpacity})`; 
-    
-    // Keskinlik (Hardness) ayarı: Shadow blur ile yumuşaklık verilir
-    const blurAmount = (100 - settings.eraserHardness) / 5; 
-    ctx.shadowBlur = blurAmount;
-    ctx.shadowColor = "white"; 
-    
-    ctx.globalCompositeOperation = "source-over"; // Çizimi tempCanvas üzerinde görünür yap
+    if (isRealEraser) {
+        // Anında silme modu: alpha kanalını sıfırlar
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.strokeStyle = `rgba(0, 0, 0, ${settings.eraserOpacity})`;
+        ctx.fillStyle = `rgba(0, 0, 0, ${settings.eraserOpacity})`;
+        // Keskinlik
+        const blurAmount = (100 - settings.eraserHardness) / 5;
+        ctx.shadowBlur = blurAmount;
+        ctx.shadowColor = "black";
+    } else {
+        // Eski maske izi gösterme modu (Geriye uyumluluk veya yedek)
+        ctx.strokeStyle = `rgba(255, 255, 255, ${settings.eraserOpacity})`; 
+        const blurAmount = (100 - settings.eraserHardness) / 5; 
+        ctx.shadowBlur = blurAmount;
+        ctx.shadowColor = "white"; 
+        ctx.globalCompositeOperation = "source-over";
+    }
 };
 
 /**
@@ -126,47 +160,28 @@ export const handleEraserStrokeEnd = (
         return;
     }
 
-    // Mevcut katman resmini yükleyerek asenkron maskeleme işlemi
-    const img = new Image();
-    img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = tempCanvas.width;
-        canvas.height = tempCanvas.height;
-        const ctx = canvas.getContext("2d");
+    // 1. tempCanvas tamamen silinmiş yeni veriyi(resmi) kapsıyor.
+    // Başka bir canvas yaratmaya veya imaj yüklemeye gerek yok.
+    const updatedDataURL = tempCanvas.toDataURL();
 
-        if (ctx) {
-            // 1. Mevcut katman içeriğini çiz
-            ctx.drawImage(img, 0, 0);
-            
-            // 2. Silme moduna geç (destination-out: çizilen yerleri alttaki resimden çıkarır)
-            ctx.globalCompositeOperation = "destination-out";
-            
-            // 3. tempCanvas'taki darbeyi bu maske ile uygula
-            ctx.drawImage(tempCanvas, 0, 0);
-            
-            const updatedDataURL = canvas.toDataURL();
-
-            // 4. State'i güncelle
-            setPages(prev => prev.map(page => {
-                if (page.id === activePageId) {
-                    return {
-                        ...page,
-                        layers: page.layers.map(l => 
-                            l.id === activeLayerId ? { ...l, dataURL: updatedDataURL } : l
-                        )
-                    };
-                }
-                return page;
-            }));
+    // 2. State'i hemen güncelle
+    setPages(prev => prev.map(page => {
+        if (page.id === activePageId) {
+            return {
+                ...page,
+                layers: page.layers.map(l => 
+                    l.id === activeLayerId ? { ...l, dataURL: updatedDataURL } : l
+                )
+            };
         }
-        
-        // İşlem bitince geçici canvas'ı temizle ve blur ayarını sıfırla
-        const tCtx = tempCanvas.getContext("2d");
-        if (tCtx) {
-            tCtx.shadowBlur = 0;
-            tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        }
-    };
-
-    img.src = activeLayer.dataURL;
+        return page;
+    }));
+    
+    // 3. Geçici canvas'ı temizle ve filtreleri sıfırla
+    const tCtx = tempCanvas.getContext("2d");
+    if (tCtx) {
+        tCtx.shadowBlur = 0;
+        tCtx.globalCompositeOperation = "source-over"; // Reset
+        tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+    }
 };

@@ -56,7 +56,7 @@ export default function Home() {
     eraserHardness: 100,
     textSize: 20,
     textColor: "#000000",
-    textFont: "Arial"
+    textFont: "Comic Sans MS"
   });
 
   /**
@@ -135,6 +135,7 @@ export default function Home() {
           setActiveTool={setActiveTool} 
           isCanvasEmpty={isCanvasEmpty} 
           setSystemMessage={setSystemMessage} 
+          isProcessing={isProcessing} // ← eklendi
         />
 
         {/* Orta Alan: Ana Çizim ve İşlem Tuvali
@@ -150,7 +151,9 @@ export default function Home() {
           setActiveLayerId={setActiveLayerId}
           toolSettings={toolSettings}
           setIsProcessing={setIsProcessing}
+          isProcessing={isProcessing} // ← eklendi
           pushHistory={pushHistory} // ← ekle
+          setSystemMessage={setSystemMessage} // ← Hata bildirimleri için
         />
 
         {/* Sağ Panel: Katman Yönetimi, Sayfa Listesi ve Tool Ayarları */}
@@ -165,21 +168,12 @@ export default function Home() {
           activeTool={activeTool}
           toolSettings={toolSettings}
           setToolSettings={setToolSettings}
+          setIsProcessing={setIsProcessing}
+          setSystemMessage={setSystemMessage}
         />
       </div>
 
-      {/* AI İŞLEM OVERLAY: İşlem sürerken kullanıcıyı bilgilendirir ve tıklamaları engeller */}
-      {isProcessing && (
-        <div className="absolute inset-0 z-999 bg-black/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-text border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(0,255,213,0.3)]"></div>
-            <div className="flex flex-col items-center">
-              <p className="text-text font-black uppercase tracking-[0.3em] animate-pulse">AI İşleniyor</p>
-              <p className="text-[10px] text-texts/40 uppercase mt-2">Arka plan temizleniyor ve metinler çıkarılıyor...</p>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Alt Panel: Çoklu resim yükleme ve hızlı sayfa navigasyonu */}
       <Bottompanel 
