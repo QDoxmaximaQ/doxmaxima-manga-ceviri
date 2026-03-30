@@ -80,6 +80,14 @@ export default function Canvas({
         [activePage?.layers, activeLayerId]
     );
 
+    const getLayerZIndex = useCallback((layerId: string) => {
+        if (!activePage) return 1;
+        const index = activePage.layers.findIndex(l => l.id === layerId);
+        if (index === -1) return 1;
+        // Layers array has 0=Top, N=Bottom. So zIndex should be max for 0.
+        return (activePage.layers.length - index) * 5 + 10;
+    }, [activePage]);
+
 
     // Zoom Hassasiyeti (Mouse Tekerleği)
     const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -270,7 +278,7 @@ export default function Canvas({
                         key={layer.id}
                         src={layer.dataURL}
                         style={{ 
-                            zIndex: i + 1,
+                            zIndex: getLayerZIndex(layer.id),
                             clipPath: layer.clipBox 
                                 ? `inset(${layer.clipBox.y}px ${Math.max(0, canvasSize.width - (layer.clipBox.x + layer.clipBox.w))}px ${Math.max(0, canvasSize.height - (layer.clipBox.y + layer.clipBox.h))}px ${layer.clipBox.x}px)`
                                 : undefined,
@@ -312,7 +320,7 @@ export default function Canvas({
                                         borderRadius: '50%',
                                         transform: 'translate(-50%, -50%)',
                                         pointerEvents: 'none',
-                                        zIndex: 155
+                                        zIndex: getLayerZIndex(layer.id) + 1
                                     }} />
                                 )}
                             </React.Fragment>
@@ -330,6 +338,7 @@ export default function Canvas({
                             scale={scale}
                             activeTool={activeTool}
                             onUpdate={handleUpdateText}
+                            zIndex={getLayerZIndex(layer.id)}
                         />
                     )
                 ))}
@@ -385,7 +394,8 @@ export default function Canvas({
                         clipPath: (() => {
                             if (!activeLayerId || !activePage) return undefined;
                             const activeLayer = activePage.layers.find(l => l.id === activeLayerId);
-                            if (activeLayer?.clipBox && (eraser.isDrawingEraser || brush.isDrawingBrush)) {
+                            // SADECE Silgi kullanırken kutu dışına çıkmasını engelle, Fırça özgür olmalıdır.
+                            if (activeLayer?.clipBox && eraser.isDrawingEraser) {
                                 return `inset(${activeLayer.clipBox.y}px ${Math.max(0, canvasSize.width - (activeLayer.clipBox.x + activeLayer.clipBox.w))}px ${Math.max(0, canvasSize.height - (activeLayer.clipBox.y + activeLayer.clipBox.h))}px ${activeLayer.clipBox.x}px)`;
                             }
                             return undefined;

@@ -62,9 +62,9 @@ export function useEraser(
             // tempCanvas'ı temizle
             ctx.clearRect(0, 0, tempCanvasRef.current!.width, tempCanvasRef.current!.height);
             
-            // Mevcut katmanı tempCanvas'a çiz
+            // Mevcut katmanı tempCanvas'a çiz (tam ekran sığdırarak)
             ctx.globalCompositeOperation = "source-over"; // Normal mod
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, tempCanvasRef.current!.width, tempCanvasRef.current!.height);
 
             // Silgi ayarlarını yükle (destination-out ile anında silme modu)
             applyEraserStyle(ctx, toolSettings, true); 

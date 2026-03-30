@@ -76,16 +76,17 @@ export function useBrush(
         if (!isDrawing) return;
         setIsDrawing(false);
 
-        // Katman Durum Kontrolü: Eğer aktif katman bir fırça katmanı değilse yeni ID oluştur
+        // Katman Durum Kontrolü: Eğer aktif katman bir resim verisine sahipse, ancak "isBase" veya "clipBox" taşımıyorsa üzerine çizilebilir
+        // Böylece yüksek çözünürlüklü asıl resim veya yapay zeka kesitleri (Arkaplan) boyutlandırma hatasına uğramaz, yeni Fırça katmanı açılır.
         const activePage = pages.find(p => p.id === activePageId);
         const activeLayer = activePage?.layers.find(l => l.id === activeLayerId);
-        // "Ana Katman" üzerine doğrudan çizim yapılamaz, yeni katman açılır
-        const isBrushLayer = activeLayer && activeLayer.dataURL && !activeLayer.isBase;
+        
+        const isBrushLayer = activeLayer && activeLayer.dataURL && !activeLayer.isBase && !activeLayer.clipBox;
 
         const targetId = isBrushLayer ? activeLayerId : `brush-${Date.now()}-${Math.random()}`;
 
         // Çizimi katmanlara işle
-        handleBrushStrokeEnd(tempCanvasRef.current, activePageId, activeLayerId, setPages, targetId!);
+        handleBrushStrokeEnd(tempCanvasRef.current, activePageId, activeLayerId, setPages, targetId!, pages);
 
         // Eğer yeni bir katman oluşturulduysa otomatik olarak o katmanı seç
         if (!isBrushLayer) {
@@ -110,29 +111,76 @@ export const handleBrushStrokeEnd = (
     activePageId: string | null,
     activeLayerId: string | null,
     setPages: React.Dispatch<React.SetStateAction<MangaPage[]>>,
-    targetLayerId: string 
+    targetLayerId: string,
+    pages: MangaPage[]
 ) => {
     if (!tempCanvas || !activePageId) return;
 
-    const strokeData = tempCanvas.toDataURL();
-    const activePage = null; // Used for context below
-    // Find active Layer first to determine action
-    setPages(prev => {
-        const page = prev.find(p => p.id === activePageId);
-        if (!page) return prev;
-        
-        const activeLayer = page.layers.find(l => l.id === activeLayerId);
-        const isBrushLayer = activeLayer && activeLayer.dataURL && !activeLayer.isBase;
+    // Mevcut state'i doğrudan oku (closure yerine parametre olarak geçildi)
+    const page = pages.find(p => p.id === activePageId);
+    if (!page) return;
 
-        if (isBrushLayer) {
-            // Asenkron çalışması için setPages içinden doğrudan return yapamayız,
-            // ama burada state'i değiştirmeden bırakıp dışarıdan img yüklenince yenileyeceğiz.
-            // Bu yüzden "isBrushLayer" true ise mevcut state'i TRETİKLEMİYORUZ (şimdilik)
-            return prev;
+    const activeLayer = page.layers.find(l => l.id === activeLayerId);
+    const isBrushLayer = activeLayer && activeLayer.dataURL && !activeLayer.isBase && !activeLayer.clipBox;
+
+    if (isBrushLayer && activeLayer.dataURL) {
+        // --- MEVCUT KATMANA BİRLEŞTİRME (Asenkron) ---
+        // tempCanvas'ın anlık verisini hemen yakala (sonra temizlenebilir)
+        const strokeDataURL = tempCanvas.toDataURL();
+        const canvasWidth = tempCanvas.width;
+        const canvasHeight = tempCanvas.height;
+
+        // tempCanvas'ı hemen temizle (yeni çizimlere hazır olsun)
+        const tCtx = tempCanvas.getContext("2d");
+        if (tCtx) {
+            tCtx.globalAlpha = 1.0;
+            tCtx.shadowBlur = 0;
+            tCtx.clearRect(0, 0, canvasWidth, canvasHeight);
         }
 
-        // Eğer yeni katman açılacaksa senkron dönebiliriz.
-        return prev.map(p => {
+        // Birleştirme işlemini setPages dışında yap
+        const existingImg = new Image();
+        const strokeImg = new Image();
+        let loadedCount = 0;
+
+        const tryMerge = () => {
+            loadedCount++;
+            if (loadedCount < 2) return; // Her iki resim de yüklenene kadar bekle
+
+            const mergeCanvas = document.createElement("canvas");
+            mergeCanvas.width = canvasWidth;
+            mergeCanvas.height = canvasHeight;
+            const mCtx = mergeCanvas.getContext("2d");
+
+            if (mCtx) {
+                mCtx.drawImage(existingImg, 0, 0);
+                mCtx.drawImage(strokeImg, 0, 0);
+                const mergedData = mergeCanvas.toDataURL();
+
+                setPages(prev => prev.map(p => {
+                    if (p.id === activePageId) {
+                        return {
+                            ...p,
+                            layers: p.layers.map(l =>
+                                l.id === activeLayerId ? { ...l, dataURL: mergedData } : l
+                            )
+                        };
+                    }
+                    return p;
+                }));
+            }
+        };
+
+        existingImg.onload = tryMerge;
+        strokeImg.onload = tryMerge;
+        existingImg.src = activeLayer.dataURL;
+        strokeImg.src = strokeDataURL;
+
+    } else {
+        // --- YENİ KATMAN OLUŞTURMA (Senkron) ---
+        const strokeData = tempCanvas.toDataURL();
+
+        setPages(prev => prev.map(p => {
             if (p.id === activePageId) {
                 const brushCount = p.layers.filter(l => l.name.startsWith("Fırca")).length;
                 const newLayer: Layer = {
@@ -144,65 +192,16 @@ export const handleBrushStrokeEnd = (
                 return { ...p, layers: [newLayer, ...p.layers] };
             }
             return p;
-        });
-    });
+        }));
 
-    // Eğer isBrushLayer ise asenkron birleştirme işlemini yap
-    // Bunu setPages sonrası hemen yapıyoruz:
-    setPages(prev => {
-        const page = prev.find(p => p.id === activePageId);
-        if (!page) return prev;
-        const activeLayer = page.layers.find(l => l.id === activeLayerId);
-        const isBrushLayer = activeLayer && activeLayer.dataURL && !activeLayer.isBase;
-        
-        if (isBrushLayer && activeLayer.dataURL) {
-            const existingImg = new Image();
-            existingImg.onload = () => {
-                const mergeCanvas = document.createElement("canvas");
-                mergeCanvas.width = tempCanvas.width;
-                mergeCanvas.height = tempCanvas.height;
-                const mCtx = mergeCanvas.getContext("2d");
-
-                if (mCtx) {
-                    mCtx.drawImage(existingImg, 0, 0);
-                    mCtx.drawImage(tempCanvas, 0, 0);
-                    const mergedData = mergeCanvas.toDataURL();
-
-                    setPages(finalPrev => finalPrev.map(fp => {
-                        if (fp.id === activePageId) {
-                            return {
-                                ...fp,
-                                layers: fp.layers.map(l => 
-                                    l.id === activeLayerId ? { ...l, dataURL: mergedData } : l
-                                )
-                            };
-                        }
-                        return fp;
-                    }));
-                }
-
-                // Geçici tuvali temizle (asenkron işlem bittikten sonra)
-                const ctx = tempCanvas.getContext("2d");
-                if (ctx) {
-                    ctx.globalAlpha = 1.0; 
-                    ctx.shadowBlur = 0;    
-                    ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-                }
-            };
-            existingImg.src = activeLayer.dataURL;
-            return prev; // Sadece yan etki için setPages'i okuduk
-        } else {
-             // Zaten üstte senkron işlendi, tempCanvası hemen temizle
-             const ctx = tempCanvas.getContext("2d");
-             if (ctx) {
-                 ctx.globalAlpha = 1.0; 
-                 ctx.shadowBlur = 0;    
-                 ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-             }
-             return prev;
+        // tempCanvas'ı temizle
+        const ctx = tempCanvas.getContext("2d");
+        if (ctx) {
+            ctx.globalAlpha = 1.0;
+            ctx.shadowBlur = 0;
+            ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
         }
-    });
-
+    }
 };
 
 /**

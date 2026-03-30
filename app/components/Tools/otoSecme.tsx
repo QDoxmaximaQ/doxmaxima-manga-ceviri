@@ -147,7 +147,11 @@ export function useAutoSelection(
                             clipBox: targetBox
                         };
 
-                        newLayerPairs.push(textLayer, bgLayer);
+                        // Use unshift to place the higher-indexed (newer) pairs at the beginning
+                        // Example: 1st iteration: [text1, bg1]
+                        // 2nd iteration: [text2, bg2, text1, bg1]
+                        // This makes 1 stack at the bottom and 3 stack at the top of the layer list! 
+                        newLayerPairs.unshift(textLayer, bgLayer);
                     });
 
                     let cleanUrl = page.url;
@@ -171,7 +175,7 @@ export function useAutoSelection(
                             ...p,
                             // Orijinal arkaplan etkilenmeden üzerine parça eklenecek, url değiştirilmiyor
                             layers: [
-                                ...[...mappedNewLayers].reverse(), 
+                                ...mappedNewLayers, 
                                 ...p.layers.filter(l => !l.selection) // Geriye kalmış varsa mavi kutuları da temizle
                             ]
                         };

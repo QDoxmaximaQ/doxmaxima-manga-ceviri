@@ -108,6 +108,7 @@ interface TextBoxProps {
     scale: number;
     activeTool: string; // Kutunun aktif araçla olan ilişkisini kontrol etmek için eklendi
     onUpdate: (id: string, config: any, content: string) => void;
+    zIndex?: number;
 }
 
 /**
@@ -173,7 +174,7 @@ function findBestFontSize(
     return best;
 }
 
-export function TextBox({ layer, isActive, scale, activeTool, onUpdate }: TextBoxProps) {
+export function TextBox({ layer, isActive, scale, activeTool, onUpdate, zIndex }: TextBoxProps) {
     const [mode, setMode] = useState<"idle" | "moving" | "resizing">("idle");
     const [resizeDir, setResizeDir] = useState<string>('se');
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -262,7 +263,7 @@ export function TextBox({ layer, isActive, scale, activeTool, onUpdate }: TextBo
                 width: `${layer.textConfig.w}px`,
                 height: `${layer.textConfig.h}px`,
                 border: isActive && isTextTool ? '1px solid #00ffd5' : '1px solid transparent',
-                zIndex: 200,
+                zIndex: zIndex ?? 200,
                 // Metin aracı aktif değilse tıklamaları kutunun altına (canvas'a) geçir
                 pointerEvents: isTextTool ? 'auto' : 'none'
             }}
