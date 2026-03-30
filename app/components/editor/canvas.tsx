@@ -2,18 +2,20 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useHandleLogic } from "../Tools/kaydırma"; // Tuval kaydırma lojiği
+import { useKaydirma } from "../hooks/tools/useKaydirma"; // Tuval kaydırma lojiği
 
 // TİPLERİ MERKEZİ useLayers'DAN ALIYORUZ
 import { MangaPage, ToolSettings } from "../hooks/useLayers";
 import { calcDisplaySize } from "../../utils/displaySize";
 
 // Araç Hook'ları ve Bileşenleri
-import { useBrush } from "../Tools/Fırca";
-import { useEraser } from "../Tools/silgi";
-import { SelectionBox, useSelection } from "../Tools/secme";
-import { TextBox, useText } from "../Tools/metin";
-import { useAutoSelection } from "../Tools/otoSecme"; // AI Hook'u eklendi
+import { useFirca } from "../hooks/tools/useFirca";
+import { useSilgi } from "../hooks/tools/useSilgi";
+import { useSecme } from "../hooks/tools/useSecme";
+import { useMetin } from "../hooks/tools/useMetin";
+import { useOtoSecme } from "../hooks/tools/useOtoSecme"; 
+import { SecimKutusu } from "./overlays/SecimKutusu";
+import { MetinKutusu } from "./overlays/MetinKutusu";
 
 /**
  * TUVAL PROPS (CanvasProps)
@@ -48,7 +50,7 @@ export default function Canvas({
     setSystemMessage
 }: CanvasProps) {
     // 1. SÜRÜKLEME (PAN) VE ZOOM MANTIĞI
-    const { position, isDragging: isHandling, handleMouseDown: startHandling } = useHandleLogic(activeTool);
+    const { position, isDragging: isHandling, handleMouseDown: startHandling } = useKaydirma(activeTool);
     const [scale, setScale] = useState(0.5);
     const [canvasSize, setCanvasSize] = useState({ width: 840, height: 1200 });
 
@@ -59,12 +61,12 @@ export default function Canvas({
     const [showAutoSelectModal, setShowAutoSelectModal] = useState(false);
 
     // 3. ARAÇ HOOK ENTEGRASYONLARI
-    const brush = useBrush(tempCanvasRef, activePageId, activeLayerId, pages, toolSettings, setPages, setActiveLayerId);
-    const eraser = useEraser(tempCanvasRef, activePageId, activeLayerId, pages, toolSettings, setPages);
-    const selection = useSelection(activePageId, pages, setPages, setActiveLayerId);
-    const textTool = useText(activePageId, pages, setPages, setActiveLayerId, toolSettings);
+    const brush = useFirca(tempCanvasRef, activePageId, activeLayerId, pages, toolSettings, setPages, setActiveLayerId);
+    const eraser = useSilgi(tempCanvasRef, activePageId, activeLayerId, pages, toolSettings, setPages);
+    const selection = useSecme(activePageId, pages, setPages, setActiveLayerId);
+    const textTool = useMetin(activePageId, pages, setPages, setActiveLayerId, toolSettings);
     // AI Aracı Hook'u
-    const autoSelection = useAutoSelection(activePageId, pages, setPages, setIsProcessing, setSystemMessage);
+    const autoSelection = useOtoSecme(activePageId, pages, setPages, setIsProcessing, setSystemMessage);
 
     const activePage = pages.find(p => p.id === activePageId);
 
@@ -300,7 +302,7 @@ export default function Canvas({
                     return activePage?.layers.map(layer => (
                         layer.selection && layer.isVisible && (
                             <React.Fragment key={layer.id}>
-                                <SelectionBox
+                                <SecimKutusu
                                     layer={layer}
                                     isActive={activeLayerId === layer.id}
                                     canvasSize={canvasSize}
@@ -331,7 +333,7 @@ export default function Canvas({
                 {/* 4. METİN KUTULARI */}
                 {activePage?.layers.map(layer => (
                     layer.textConfig && layer.isVisible && (
-                        <TextBox
+                        <MetinKutusu
                             key={layer.id}
                             layer={layer}
                             isActive={activeLayerId === layer.id}
