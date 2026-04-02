@@ -18,6 +18,7 @@ import {
   ScanSearch
 } from 'lucide-react';
 import { OcrEngines, getLanguagesForEngine } from '../ocr/Ocr_model';
+import { InpaintingEngines } from '../arkaplan/index';
 
 export default function SettingsPage() {
   const [isSaved, setIsSaved] = useState(false);
@@ -31,7 +32,10 @@ export default function SettingsPage() {
 
   const [lamaKey, setLamaKey] = useState<string>("");
   const [sdKey, setSdKey] = useState<string>("");
-  const [nanoBananaKey, setNanoBananaKey] = useState<string>("");
+
+  const [bgEngine, setBgEngine] = useState<string>("lama");
+  const [isMixedModel, setIsMixedModel] = useState<boolean>(false);
+  const [mixedLevel, setMixedLevel] = useState<number>(1);
 
   useEffect(() => {
     const savedOcr = localStorage.getItem("ocrEngine");
@@ -62,8 +66,14 @@ export default function SettingsPage() {
     const savedSdKey = localStorage.getItem("sdApiKey");
     if (savedSdKey) setSdKey(savedSdKey);
 
-    const savedNanoBananaKey = localStorage.getItem("nanoBananaApiKey");
-    if (savedNanoBananaKey) setNanoBananaKey(savedNanoBananaKey);
+    const savedBgEngine = localStorage.getItem("bgEngine");
+    if (savedBgEngine) setBgEngine(savedBgEngine);
+
+    const savedIsMixedModel = localStorage.getItem("isMixedModel");
+    if (savedIsMixedModel) setIsMixedModel(savedIsMixedModel === "true");
+
+    const savedMixedLevel = localStorage.getItem("mixedLevel");
+    if (savedMixedLevel) setMixedLevel(parseInt(savedMixedLevel, 10));
   }, []);
 
   const saveAllSettings = () => {
@@ -77,7 +87,10 @@ export default function SettingsPage() {
     
     localStorage.setItem("lamaApiKey", lamaKey);
     localStorage.setItem("sdApiKey", sdKey);
-    localStorage.setItem("nanoBananaApiKey", nanoBananaKey);
+
+    localStorage.setItem("bgEngine", bgEngine);
+    localStorage.setItem("isMixedModel", isMixedModel.toString());
+    localStorage.setItem("mixedLevel", mixedLevel.toString());
 
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
@@ -148,11 +161,6 @@ export default function SettingsPage() {
               label="STABLE DIFFUSION KEY"
               value={sdKey}
               onChange={(val) => setSdKey(val)}
-            />
-            <KeyInput
-              label="NANO BANANA KEY"
-              value={nanoBananaKey}
-              onChange={(val) => setNanoBananaKey(val)}
             />
           </div>
         </section>
@@ -245,6 +253,62 @@ export default function SettingsPage() {
                 }}
               />
             )}
+          </div>
+        </section>
+
+        {/* ARKAPLAN (INPAINTING) AYARLARI */}
+        <section className="p-5 sm:p-6 rounded-2xl border border-white/5 bg-[#1c1c27] shadow-2xl space-y-6 relative z-[35]">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+            <Image size={20} className="text-text" />
+            <h2 className="font-black uppercase text-[10px] sm:text-xs tracking-widest text-[#00ffd5]">Arkaplan Ayarları</h2>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+            <div className="flex-1 w-full relative z-[60]">
+              <CustomSelect
+                label="Arkaplan Modeli"
+                value={bgEngine}
+                options={InpaintingEngines}
+                onChange={(val) => setBgEngine(val)}
+              />
+            </div>
+            <div className="flex-1 w-full space-y-4">
+              <label className="text-[9px] sm:text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 block">Karışık Modu</label>
+              <button
+                onClick={() => setIsMixedModel(!isMixedModel)}
+                className={`w-full px-4 py-4 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                  isMixedModel 
+                    ? 'bg-text text-black border-text shadow-[0_0_15px_rgba(0,255,213,0.3)]' 
+                    : 'bg-black/40 border-white/10 text-white/50 hover:border-text/50 hover:text-white'
+                }`}
+              >
+                Karışık Model {isMixedModel ? "Açık" : "Kapalı"}
+              </button>
+              
+              {isMixedModel && (
+                <div className="space-y-3 p-4 rounded-xl bg-black/40 border border-white/10 mt-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-white/50 uppercase">
+                    <span>Kademe 1</span>
+                    <span>Kademe 2</span>
+                    <span>Kademe 3</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="3" 
+                    step="1"
+                    value={mixedLevel}
+                    onChange={(e) => setMixedLevel(parseInt(e.target.value, 10))}
+                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                    style={{ accentColor: '#00ffd5' }}
+                  />
+                  <div className="text-center text-[10px] font-bold text-text">
+                    {mixedLevel === 1 && "Düşük (1. Kademe)"}
+                    {mixedLevel === 2 && "Orta (2. Kademe)"}
+                    {mixedLevel === 3 && "Yüksek (3. Kademe)"}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 

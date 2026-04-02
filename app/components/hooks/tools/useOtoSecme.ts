@@ -1,7 +1,6 @@
 // app/components/hooks/tools/useOtoSecme.ts
 import { MangaPage, Layer } from "../useLayers";
 import { calcDisplaySize, getOriginalDimensions } from "../../../utils/displaySize";
-import { processWithLama } from "../../../arkaplan/lama";
 
 export function useOtoSecme(
     activePageId: string | null,
@@ -104,10 +103,18 @@ export function useOtoSecme(
                         newLayerPairs.unshift(textLayer, bgLayer);
                     });
 
+                    const bgEngine = localStorage.getItem("bgEngine") || "lama";
                     let cleanUrl = page.url;
                     try {
-                        cleanUrl = await processWithLama(page.url, [], targetBoxes, scaleX, scaleY);
+                        if (bgEngine === "sd") {
+                            const { processWithStableDiffusion } = await import("../../../arkaplan/stable-diffusion");
+                            cleanUrl = await processWithStableDiffusion(page.url, [], targetBoxes, scaleX, scaleY);
+                        } else {
+                            const { processWithLama } = await import("../../../arkaplan/lama");
+                            cleanUrl = await processWithLama(page.url, [], targetBoxes, scaleX, scaleY);
+                        }
                     } catch (err: any) {
+                        console.error("[useOtoSecme] Arkaplan hatası:", err);
                         setSystemMessage({ text: "Uyarı: Arkaplan Temizleme Başarısız, Sadece Metinler Eklendi", color: "text-orange-500 font-bold text-xs" });
                     }
 

@@ -178,7 +178,7 @@ export async function recognizeWithOCRSpace(imageSource: string, apiKey: string)
     console.log(`[OCR.Space] Engine ${engineId} API Yanıtı alındı:`, data);
 
     if (data.IsErroredOnProcessing) {
-      console.error(`[OCR.Space] Engine ${engineId} İşlem Hatası:`, data.ErrorMessage);
+      console.warn(`[OCR.Space] Engine ${engineId} İşlem Hatası:`, data.ErrorMessage);
       throw new Error("OCR.Space Hatası: " + data.ErrorMessage);
     }
 
@@ -213,17 +213,28 @@ export async function recognizeWithOCRSpace(imageSource: string, apiKey: string)
   };
 
   try {
+    let rawLines: BBoxLine[] = [];
+    
     // --- AŞAMA 1: Engine 2 ile dene (yoğun metin için optimize) ---
     console.log("[OCR.Space] Engine 2 deneniyor...");
-    let rawLines = await runOCR("2");
-    console.log(`[OCR.Space] Engine 2 sonucu: ${rawLines.length} satır bulundu.`);
+    try {
+      rawLines = await runOCR("2");
+      console.log(`[OCR.Space] Engine 2 sonucu: ${rawLines.length} satır bulundu.`);
+    } catch (engine2Error: any) {
+      console.warn(`[OCR.Space] Engine 2 başarısız oldu (${engine2Error.message}), Engine 1'e geçiliyor...`);
+    }
 
-    // --- AŞAMA 2: Engine 2 boş dönerse, Engine 1 ile tekrar dene ---
-    // Engine 1 büyük/kalın yazılar ve karmaşık arka planlar için daha iyi çalışıyor
+    // --- AŞAMA 2: Engine 2 boş dönerse veya hata verirse, Engine 1 ile tekrar dene ---
+    // Engine 1 büyük/kalın yazılar ve karmaşık arka planlar için daha iyi çalışıyor ve genelde çökmüyor
     if (rawLines.length === 0) {
-      console.log("[OCR.Space] Engine 2 sonuç bulamadı, Engine 1 ile yeniden deneniyor...");
-      rawLines = await runOCR("1");
-      console.log(`[OCR.Space] Engine 1 sonucu: ${rawLines.length} satır bulundu.`);
+      console.log("[OCR.Space] Engine 2 sonuç bulamadı veya çöktü, Engine 1 ile yeniden deneniyor...");
+      try {
+        rawLines = await runOCR("1");
+        console.log(`[OCR.Space] Engine 1 sonucu: ${rawLines.length} satır bulundu.`);
+      } catch (engine1Error: any) {
+        console.error(`[OCR.Space] Engine 1 de başarısız oldu:`, engine1Error);
+        throw new Error("OCR sunucuları çok yoğun veya hata veriyor, lütfen tekrar deneyin.");
+      }
     }
 
     // Ayrı ayrı bulunan tüm satırları tekrar baloncuk paragrafı halinde dönüştürüyoruz,

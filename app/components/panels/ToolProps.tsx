@@ -234,15 +234,21 @@ export default function Toolprops({
                     }
                 }).filter(Boolean) as Layer[];
 
-                // Lama Inpainting İşlemi
+                // Arkaplan Inpainting İşlemi
                 let cleanUrl = activePage.url!;
                 try {
                     if (targetBoxes.length > 0) {
-                        const { processWithLama } = await import("../../arkaplan/lama");
-                        cleanUrl = await processWithLama(cleanUrl, [], targetBoxes, scaleX, scaleY);
+                        const bgEngine = localStorage.getItem("bgEngine") || "lama";
+                        if (bgEngine === "sd") {
+                            const { processWithStableDiffusion } = await import("../../arkaplan/stable-diffusion");
+                            cleanUrl = await processWithStableDiffusion(cleanUrl, [], targetBoxes, scaleX, scaleY);
+                        } else {
+                            const { processWithLama } = await import("../../arkaplan/lama");
+                            cleanUrl = await processWithLama(cleanUrl, [], targetBoxes, scaleX, scaleY);
+                        }
                     }
                 } catch (err: any) {
-                    console.error("[Secme] LAMA hatası:", err);
+                    console.error("[Secme] Arkaplan inpainting hatası:", err);
                 }
 
                 setPages(prev => prev.map(page => {
